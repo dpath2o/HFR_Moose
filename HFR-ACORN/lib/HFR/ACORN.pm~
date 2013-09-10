@@ -1,0 +1,384 @@
+package HFR::ACORN;
+
+use 5.006;
+use strict;
+use warnings;
+use Date::Parse;
+use Date::Calc qw ( Localtime );
+use HFR;
+use PDL;
+use PDL::Ops;
+use PDL::NiceSlice;
+use PDL::Math;
+use PDL::Char;
+
+
+=head1 NAME
+
+
+HFR::ACORN - for use with HF radar (HFR) and Australian Coastal Ocean Radar Network (ACORN) data
+
+
+=head1 VERSION
+
+
+Version 0.1
+
+
+=cut
+
+
+our $VERSION = '0.1';
+
+
+=head1 SYNOPSIS
+
+
+At present the package really contains methods for constructing a list of NetCDF files (either local or on an openDAP server -- a url) and some various tools (methods) for processing that information.
+
+Package dependencies: Date::Parse, DateTime, Date::Calc, HFR, PDL, PDL::NetCDF
+
+    use HFR::ACORN;
+
+    my $foo = HFR::ACORN->new();
+
+Returns a HASH of parameters ...
+
+
+=head1 EXPORT
+
+
+No exported functions at this time
+
+
+=head1 SUBROUTINES/METHODS
+
+
+=head2 new
+
+
+=cut
+
+
+sub new {
+
+   my($class, %args) = @_;
+   my $self          = bless( {} , $class );
+   
+   # REQUIRED INPUT PARAMETERS
+   my $station_site      = exists $args{station_site} ? $args{station_site} : ''; 
+   $self->{station_site} = $station_site;
+   my $start_time        = exists $args{start_time} ? $args{start_time} : '';
+   $self->{start_time}   = $start_time;
+   my $stop_time         = exists $args{stop_time} ? $args{stop_time} : '';
+   $self->{stop_time}    = $stop_time;
+
+   # OPTIONAL DIRECTORY INFORMATION PARAMETERS
+   my $base_data_directory        = exists $args{base_data_directory} ? $args{base_data_directory} : '/volumes/data/hfr';
+   $self->{base_data_directory}   = $base_data_directory;
+   my $base_fig_directory         = exists $args{base_fig_directory} ? $args{base_fig_directory} : '/volumes/data/figs/hfr';
+   $self->{base_fig_directory}    = $base_fig_directory;
+   my $hot_directory              = exists $args{hot_directory} ? $args{hot_directory} : '/volumes/data/tmp/data';
+   $self->{hot_directory}         = $hot_directory;
+   my $base_config_directory      = exists $args{base_config_directory} ? $args{base_config_directory} : '/volumes/data/etc/hfr';
+   $self->{base_config_directory} = $base_config_directory;
+
+   # OPTIONAL STATION AND/OR SITE CODENAMES THAT CORRESPOND TO DIFFERENT SCENARIOS
+   my @stations_five_minute_offset      = exists $args{stations_five_minute_offset} ? $args{stations_five_minute_offset} : qw( fre csp nnb lei );
+   $self->{stations_five_minute_offset} = \@stations_five_minute_offset;
+   my @wera_codenames                   = exists $args{wera_codenames} ? $args{wera_codenames} : qw( gui fre rot cwi csp sag nnb rrk cof lei tan cbg );
+   $self->{wera_codenames}              = \@wera_codenames;
+   my @site_codenames                   = exists $args{site_codenames} ? $args{site_codenames} : qw( turq rot sag bonc cof cbg );
+   $self->{site_codenames}              = \@site_codenames;
+   my @seasonde_site_codenames          = exists $args{seasonde_site_codenames} ? $args{seasonde_site_codenames} : qw( turq bonc );
+   $self->{seasonde_site_codenames}     = \@seasonde_site_codenames;
+   my @ten_minute_codenames             = exists $args{ten_minute_codenames} ? $args{ten_minute_codenames} : qw( gui fre cwi csp nnb rrk lei tab );
+   $self->{ten_minute_codenames}        = \@ten_minute_codenames;
+   my @sixty_minute_codenames           = exists $args{sixty_minute_codenames} ? $args{sixty_minute_codenames} : qw( crvt sbrd turq rot sag nocr bfcv bonc cof cbf );
+   $self->{sixty_minute_codenames}      = \@sixty_minute_codenames;
+
+   # OPTIONAL COVERAGE PARAMETES
+   my $coverage_file_suffix      = exists $args{coverage_file_suffix} ? $args{coverage_file_suffix} : 'eps';
+   $self->{coverage_file_suffix} = $coverage_file_suffix;
+   my $coverage_data_file        = exists $args{coverage_data_file} ? $args{coverage_data_file} : 'coverage_data.xyz';
+   $self->{coverage_data_file}   = $coverage_data_file;
+
+   # OPTIONAL GRID PARAMETERS
+   my $temporary_seasonde_radial_grid_file      = exists $args{temporary_seasonde_radial_grid_file} ? $args{temporary_seasonde_radial_grid_file} : 'seasonde_radial_grid.xy';
+   $self->{temporary_seasonde_radial_grid_file} = $temporary_seasonde_radial_grid_file;
+
+   # OPTIONAL GMT PARAMETERS
+   my $gmt_executables_directory      = exists $args{gmt_executables_directory} ? $args{gmt_executables_directory} : '/opt/local/lib/gmt5/bin';
+   $self->{gmt_executables_directory} = $gmt_executables_directory;
+
+   # OPTIONAL FILE OPERATIONS PARAMETERS
+   my $qc                      = exists $args{qc} ? $args{qc} : 0;
+   $self->{qc}                 = $qc;
+   my $directory_depth         = exists $args{directory_depth} ? $args{directory_depth} : 'symd';
+   $self->{directory_depth}    = $directory_depth;
+   my $base_path               = exists $args{base_path} ? $args{base_path} : 'http://opendap-qcif.arcs.org.au/thredds/dodsC/IMOS/ACORN';
+   $self->{base_path}          = $base_path;
+   my $qc_version              = exists $args{qc_version} ? $args{qc_version} : 'fv00';
+   $self->{qc_version}         = $qc_version;
+   my $data_version            = exists $args{data_version} ? $args{data_version} : 'rv';
+   $self->{data_version}       = $data_version;
+   my $data_type               = exists $args{data_type} ? $args{data_type} : 'radial';
+   $self->{data_type}          = $data_type;
+   my $filename_prefix         = exists $args{filename_prefix} ? $args{filename_prefix} : 'imos_acorn';
+   $self->{filename_prefix}    = $filename_prefix;
+   my $full_file_list          = exists $args{full_file_list} ? $args{full_file_list} : '';
+   $self->{full_file_list}     = $full_file_list;
+   my $full_file_list_url      = exists $args{full_file_list_url} ? $args{full_file_list_url} : '';
+   $self->{full_file_list_url} = $full_file_list_url;
+
+   # OPTIONAL OPTIONS
+   my $verbose = exists $args{verbose} ? $args{verbose} : 0;
+   $self->{verbose} = $verbose;
+
+   # RETURN
+   return $self;
+
+ }
+
+
+=head2 is_wera
+
+TRUE or FALSE
+is parameter station_site a WERA station or site as defined by parameter wera_codenames
+
+=cut
+
+
+sub is_wera { 
+  my $self = shift;
+  if ( $self->{station_site} ~~ @{$self->{wera_codenames}} ) { return 1; } else { return 0; }
+}
+
+
+=head2 is_site 
+
+TRUE or FALSE
+is paramater station_site a site as defined by parameter site_codenames
+
+=cut
+
+
+sub is_site {
+  my $self = shift;
+  if ($self->{station_site} ~~ @{$self->{site_codenames}} ) { return 1; } else { return 0; }
+}
+
+
+=head2 is_site_seasonde
+
+TRUE or FALSE
+is parameter station_site a SeaSonde site as defined by parameter seasonde_site_codenames
+
+=cut
+
+
+sub is_site_seasonde {
+  my $self = shift;
+  if ($self->{station_site} ~~ @{$self->{seasonde_site_codenames}} ) { return 1; } else { return 0; }
+}
+
+
+=head2 determine_site
+
+given an ACORN station name return it's site name
+
+=cut
+
+
+sub determine_site {
+
+  my $self = shift;
+
+  if ($self->{station_site} =~ /crvt|sbrd|turq/i) { $self->{site} = 'turq'; }
+  elsif ($self->{station_site} =~ /fre|gui|rot/i) { $self->{site} = 'rot'; }
+  elsif ($self->{station_site} =~ /cwi|csp|sag/i) { $self->{site} = 'sag'; }
+  elsif ($self->{station_site} =~ /nocr|bfcv|bonc/i) { $self->{site} = 'bonc'; }
+  elsif ($self->{station_site} =~ /nnb|rrk|cof/i) { $self->{site} = 'cof'; }
+  elsif ($self->{station_site} =~ /lei|tan|cbg/i) { $self->{site} = 'cbg'; }
+  else { warn 'given station name is NOT and ACORN site'; $self->{site} = ''; }
+
+  return $self;
+
+}
+
+
+=head2 determine_datetime
+
+Assuming that parameters start_time and stop_time are strings and readable by str2time function of package Date::Parse then return them as defined by str2time
+
+=cut
+
+
+sub determine_datetime {
+  my $self = shift;
+  $self->{start_time} = str2time( $self->{start_time} );
+  $self->{stop_time}  = str2time( $self->{stop_time} );
+  return $self;
+}
+
+
+=head2 define_datestrs
+
+use Date::Calc to define date strings from start and stop times
+requires method determine_datetime to have been called
+
+=cut
+
+
+sub define_datestrs {
+  my $self = shift;
+  my ($yr0,$mo0,$dy0, $hr0,$mn0,$sc0, $doy0,$dow0,$dst0) = Localtime($self->{start_time});
+  my ($yrN,$moN,$dyN, $hrN,$mnN,$scN, $doyN,$dowN,$dstN) = Localtime($self->{stop_time});
+  my $t0_str = sprintf('%04d-%02d-%02d %02d:%02d',$yr0,$mo0,$dy0,$hr0,$mn0);
+  my $tN_str = sprintf('%04d-%02d-%02d %02d:%02d',$yrN,$moN,$dyN,$hrN,$mnN);
+  $self->{start_time_str} = $t0_str;
+  $self->{stop_time_str}  = $tN_str;
+  return $self;
+}
+
+
+=head2 determine_delta_time
+
+Return the parameter dt based on the parameter station_site and conditioned upon parameters ten_minute_codenames and sixty_minute_codenames
+
+=cut
+
+
+sub determine_delta_time {
+  my $self = shift;
+  if ( $self->{station_site} ~~ @{$self->{ten_minute_codenames}} ) {
+    $self->{dt} = 600;
+  } elsif ( $self->{station_site} ~~ @{$self->{sixty_minute_codenames}} ) {
+    $self->{dt} = 3600;
+  } else {
+    die "could not determine delta time";
+  }
+  return $self;
+}
+
+
+=head2 determine_offset_time
+
+Offset the parameter start_time by 300 seconds if parameter station_site is a parameter stations_five_minute_offset
+
+=cut
+
+sub determine_offset_time {
+  my $self = shift;
+  if ( $self->{station_site} ~~ @{$self->{stations_five_minute_offset}} ) { $self->{start_time}+=300; }
+  return $self;
+}
+
+
+=head2 determine_codename
+
+Basic decipher of possible station or site meanings from the input
+
+=cut
+
+
+sub determine_codename {
+  my $self = shift;
+  if ( $self->{station_site} =~ /cervantes|crvt/i ) {
+    $self->{station_site} = 'crvt';
+  } elsif ( $self->{station_site} =~ /seabird|sbrd/i ) {
+    $self->{station_site} = 'sbrd';
+  } elsif ( $self->{station_site} =~ /guilderton|gui/i ) {
+    $self->{station_site} = 'gui';
+  } elsif ( $self->{station_site} =~ /fremantle|fre/i ) {
+    $self->{station_site} = 'fre';
+  } elsif ( $self->{station_site} =~ /cape wiles|eyre peninsula|cwi/i ) {
+    $self->{station_site} = 'cwi';
+  } elsif ( $self->{station_site} =~ /cape spencer|yorke peninsula|csp/i ) {
+    $self->{station_site} = 'csp';
+  } elsif ( $self->{station_site} =~ /nora|nora creina|robe|nocr/i ) {
+    $self->{station_site} = 'nocr';
+  } elsif ( $self->{station_site} =~ /blackfellows|blackfellows caves|bfcv/i ) {
+    $self->{station_site} = 'bfcv';
+  } elsif ( $self->{station_site} =~ /nambucca|nambucca heads|nnb/i ) {
+    $self->{station_site} = 'nnb';
+  } elsif ( $self->{station_site} =~ /red rock|rrk/i ) {
+    $self->{station_site} = 'rrk';
+  } elsif ( $self->{station_site} =~ /lady elliot|lady elliot island|lei/i ) {
+    $self->{station_site} = 'lei';
+  } elsif ( $self->{station_site} =~ /tannum|tannum sands|tan/i ) {
+    $self->{station_site} = 'tan';
+  } elsif ( $self->{station_site} =~ /turquoise|turquoise coast|turq/i ) {
+    $self->{station_site} = 'turq';
+  } elsif ( $self->{station_site} =~ /rottnest|rottnest island|rot/i ) {
+    $self->{station_site} = 'rot';
+  } elsif ( $self->{station_site} =~ /sa gulf|south australian gulf|sag/i ) {
+    $self->{station_site} = 'sag';
+  } elsif ( $self->{station_site} =~ /bonney coast|limestone coast|bonc/i ) {
+    $self->{station_site} = 'bonc';
+  } elsif ( $self->{station_site} =~ /coffs|coffs harbour|cof/i ) {
+    $self->{station_site} = 'cof';
+  } elsif ( $self->{station_site} =~ /capricorn|capricorn bunker group|cbg/i ) {
+    $self->{station_site} = 'cbg';
+  }
+  return $self;
+}
+
+
+=head1 AUTHOR
+
+Atwater, Daniel Patrick Lewis, C<< <danielpath2o at gmail.com> >>
+
+=head1 BUGS
+
+Please report any bugs or feature requests to C<bug-hfr-acorn at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=HFR-ACORN>.  I will be notified, and then you'll
+automatically be notified of progress on your bug as I make changes.
+
+=head1 SUPPORT
+
+You can find documentation for this module with the perldoc command.
+
+    perldoc HFR::ACORN
+
+
+You can also look for information at:
+
+=over 4
+
+=item * RT: CPAN's request tracker (report bugs here)
+
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=HFR-ACORN>
+
+=item * AnnoCPAN: Annotated CPAN documentation
+
+L<http://annocpan.org/dist/HFR-ACORN>
+
+=item * CPAN Ratings
+
+L<http://cpanratings.perl.org/d/HFR-ACORN>
+
+=item * Search CPAN
+
+L<http://search.cpan.org/dist/HFR-ACORN/>
+
+=back
+
+
+=head1 ACKNOWLEDGEMENTS
+
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright 2012 Atwater, Daniel Patrick Lewis.
+
+This program is free software; you can redistribute it and/or modify it
+under the terms of either: the GNU General Public License as published
+by the Free Software Foundation; or the Artistic License.
+
+See http://dev.perl.org/licenses/ for more information.
+
+
+=cut
+
+1; # End of HFR::ACORN

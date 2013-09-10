@@ -1,0 +1,6 @@
+Revision history for Perl extension HFR::SeaSonde::ASCII.
+
+0.01  Thu Feb  2 07:53:27 2012
+	- original version; created by h2xs 1.23 with options
+		-XAn HFR::SeaSonde::ASCII
+

@@ -1,0 +1,145 @@
+\section{NAME\label{NAME}\index{NAME}}
+
+
+HFR-ACORN - for use with HF radar (HFR) and Australian Coastal Ocean Radar Network (ACORN) data.
+
+\section{VERSION\label{VERSION}\index{VERSION}}
+
+
+Version 1.45
+
+\section{SYNOPSIS\label{SYNOPSIS}\index{SYNOPSIS}}
+
+
+In a broad sense HFR-ACORN perl module is intended to be used as a class which utilises methods for manipulating ACORN derived data.  Plainly speaking, what we the author intends is that this module be used in an object-orientated way for extracting, visualising and running various computations on ACORN derived data.
+
+
+
+Here's a quick example of one the myriad of possible uses. Say you'd like to build a list of radial files from ACORN Guilderton (GUI) station for certain time period:
+
+
+
+EXAMPLE
+\texttt{$<$use HFR::ACORN;}$>$
+\texttt{$<$use PDL::Lite;}$>$
+\texttt{$<$use PDL::Char;}$>$
+\texttt{$<$\$acorn = HFR::ACORN-}new( sos =$>$ 'guilderton' , start =$>$ '12 sep 2011' , stop =$>$ '12 sep 2012 01:30' );$>$$>$
+\texttt{$<$\$acorn-}HFR::ACORN::FileOps::construct\_file\_list;$>$$>$
+\texttt{$<$if (-e \$acorn-}\{full\_file\_list\}-$>$atstr(0)) \{ print "\$\_ exists$\backslash$n"; \} else \{ print "\$\_ does NOT exists$\backslash$n"; \}$>$$>$
+
+
+
+The above example checks to see if first file list of files created exists and prints a message on its existence.
+Plenty of assumptions (default parameters) are made in the above example when calling \texttt{$<$HFR::ACORN-}new$>$$>$ (see below for the list of those parameters).
+
+
+
+\textbf{NOTE}: The backbone of HFR::ACORN is the \textbf{YAML configuration file}. See \emph{HFR::YAML}.
+
+\section{SUBROUTINES/METHODS\label{SUBROUTINES_METHODS}\index{SUBROUTINES/METHODS}}
+\begin{description}
+
+\item[{\texttt{$<$new}$>$}] \mbox{}
+
+Returns a new ACORN object, which has loaded the file configuration file (see \emph{HFR::YAML})
+
+\end{description}
+\subsection*{new\label{new}\index{new}}
+\subsection*{is\_wera\label{is_wera}\index{is\ wera}}
+
+
+Given \texttt{$<$\$acorn-}\{sos\}$>$$>$ check to see if that name is a \textit{$<$WERA station or site}$>$
+
+\subsection*{is\_site\label{is_site}\index{is\ site}}
+
+
+Given \texttt{$<$\$acorn-}\{sos\}$>$$>$ check to see if that name is a \textit{$<$site}$>$
+
+\subsection*{is\_site\_seasonde\label{is_site_seasonde}\index{is\ site\ seasonde}}
+
+
+Given \texttt{$<$\$acorn-}\{sos\}$>$$>$ check to see if that name is a \textit{$<$SeaSonde site}$>$
+
+\subsection*{is\_site\_wera\label{is_site_wera}\index{is\ site\ wera}}
+
+
+Given \texttt{$<$\$acorn-}\{sos\}$>$$>$ check to see if that name is a \textit{$<$WERA site}$>$
+
+\subsection*{determine\_site\label{determine_site}\index{determine\ site}}
+
+
+Given \texttt{$<$\$acorn-}\{sos\}$>$$>$ return \texttt{$<$\$acorn-}\{site\}$>$$>$
+
+\subsection*{determine\_datetime\label{determine_datetime}\index{determine\ datetime}}
+
+
+Given both \texttt{$<$\$acorn-}\{start\}$>$$>$ \textit{and} \texttt{$<$\$acorn-}\{stop\}$>$$>$ are defined as parse-able date-string then
+return \texttt{$<$\$acorn-}\{start\}$>$$>$ and \texttt{$<$\$acorn-}\{stop\}$>$$>$ as POSIX time as a PDL scalar.
+See
+
+\subsection*{define\_datestrs\label{define_datestrs}\index{define\ datestrs}}
+\subsection*{determine\_delta\_time\label{determine_delta_time}\index{determine\ delta\ time}}
+\subsection*{determine\_offset\_time\label{determine_offset_time}\index{determine\ offset\ time}}
+\subsection*{determine\_codename\label{determine_codename}\index{determine\ codename}}
+\section{AUTHOR\label{AUTHOR}\index{AUTHOR}}
+
+
+Atwater, Daniel Patrick Lewis, \texttt{$<$danielpath2o at gmail.com$>$}
+
+\section{BUGS\label{BUGS}\index{BUGS}}
+
+
+Please report any bugs or feature requests to \texttt{bug-hfr-acorn at rt.cpan.org}, or through
+the web interface at \textsf{http://rt.cpan.org/NoAuth/ReportBug.html?Queue=HFR-ACORN}.  I will be notified, and then you'll
+automatically be notified of progress on your bug as I make changes.
+
+\section{SUPPORT\label{SUPPORT}\index{SUPPORT}}
+
+
+You can find documentation for this module with the perldoc command.
+
+\begin{verbatim}
+    perldoc HFR::ACORN
+\end{verbatim}
+
+
+You can also look for information at:
+
+\begin{itemize}
+
+\item RT: CPAN's request tracker (report bugs here)
+
+\textsf{http://rt.cpan.org/NoAuth/Bugs.html?Dist=HFR-ACORN}
+
+
+\item AnnoCPAN: Annotated CPAN documentation
+
+\textsf{http://annocpan.org/dist/HFR-ACORN}
+
+
+\item CPAN Ratings
+
+\textsf{http://cpanratings.perl.org/d/HFR-ACORN}
+
+
+\item Search CPAN
+
+\textsf{http://search.cpan.org/dist/HFR-ACORN/}
+
+\end{itemize}
+\section{ACKNOWLEDGEMENTS\label{ACKNOWLEDGEMENTS}\index{ACKNOWLEDGEMENTS}}
+\section{LICENSE AND COPYRIGHT\label{LICENSE_AND_COPYRIGHT}\index{LICENSE AND COPYRIGHT}}
+
+
+Copyright 2012 Atwater, Daniel Patrick Lewis.
+
+
+
+This program is free software; you can redistribute it and/or modify it
+under the terms of either: the GNU General Public License as published
+by the Free Software Foundation; or the Artistic License.
+
+
+
+See \textsf{http://dev.perl.org/licenses/} for more information.
+

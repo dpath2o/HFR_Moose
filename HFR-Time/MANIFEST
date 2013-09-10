@@ -1,0 +1,6 @@
+Changes
+Makefile.PL
+MANIFEST
+README
+t/HFR-Time.t
+lib/HFR/Time.pm

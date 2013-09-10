@@ -1,0 +1,6 @@
+Revision history for Perl extension HFR.
+
+0.01  Wed Nov 16 10:32:49 2011
+	- original version; created by h2xs 1.23 with options
+		-XAn HFR
+

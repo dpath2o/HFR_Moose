@@ -1,0 +1,6 @@
+Revision history for Perl extension HFR::SeaSonde::FileOps.
+
+0.01  Thu Feb  2 22:21:29 2012
+	- original version; created by h2xs 1.23 with options
+		-XAn HFR::SeaSonde::FileOps
+

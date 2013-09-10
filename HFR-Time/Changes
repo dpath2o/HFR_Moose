@@ -1,0 +1,6 @@
+Revision history for Perl extension HFR::Time.
+
+0.01  Wed Aug 28 10:06:14 2013
+	- original version; created by h2xs 1.23 with options
+		-AXc -n HFR::Time
+

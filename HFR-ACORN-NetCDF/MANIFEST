@@ -1,0 +1,6 @@
+Changes
+Makefile.PL
+MANIFEST
+README
+t/HFR-ACORN-NetCDF.t
+lib/HFR/ACORN/NetCDF.pm
